@@ -1,0 +1,915 @@
+{
+  "version": "2.5.0",
+
+  "_comment": "Starter config. The path globs in `tags` and phase `gate` arrays are generic examples for a typical TypeScript/web project -- customize them to your repo's layout. Security-sensitive paths (auth, DB migrations, API routes) map to higher-severity checks; docs and UI map to lower. The check IDs, phases, tiers, and routing are the engine's contract -- edit globs, severities, and rule text freely, but keep the keys the engine reads.",
+
+  "defaults": {
+    "kind": "review",
+    "tier": "all"
+  },
+
+  "phases": [
+    { "id": "P0", "name": "Security Design", "order": 0 },
+    { "id": "P1", "name": "Security Implementation", "order": 1 },
+    { "id": "P2", "name": "Correctness", "order": 2 },
+    { "id": "P3", "name": "TypeScript", "order": 3 },
+    { "id": "P4", "name": "Architecture", "order": 4 },
+    {
+      "id": "P5",
+      "name": "Schema",
+      "order": 5,
+      "gate": ["**/migrations/**", "**/schema.sql", "**/*.sql"]
+    },
+    {
+      "id": "P6",
+      "name": "Accessibility",
+      "order": 6,
+      "gate": [
+        "**/*.tsx",
+        "**/*.jsx",
+        "**/*.css",
+        "**/*.scss",
+        "**/components/**"
+      ]
+    },
+    {
+      "id": "P7",
+      "name": "Dependencies",
+      "order": 7,
+      "gate": ["**/package.json"]
+    },
+    { "id": "PROC", "name": "Process", "order": 8 }
+  ],
+
+  "tiers": [
+    {
+      "id": "all",
+      "level": 0,
+      "models": "Any reviewer",
+      "can": "Pattern matching, syntax, logic tracing from diff"
+    },
+    {
+      "id": "reasoning",
+      "level": 1,
+      "models": "Current frontier models -- discover via HydraMCP list_models (e.g. Gemini 2.5 Pro, GPT-5.x, Claude)",
+      "can": "Multi-step reasoning, OWASP knowledge, architecture judgment"
+    },
+    {
+      "id": "repo",
+      "level": 2,
+      "models": "Claude Code agents",
+      "can": "Browse repo beyond diff, verify file existence, read related code"
+    }
+  ],
+
+  "severities": [
+    { "id": "S0", "label": "CRITICAL", "blocks": true },
+    { "id": "S1", "label": "IMPORTANT", "blocks": true },
+    { "id": "S2", "label": "MINOR", "blocks": false }
+  ],
+
+  "tags": [
+    {
+      "id": "auth",
+      "globs": [
+        "**/auth/**",
+        "**/auth*",
+        "**/session*",
+        "**/middleware/auth*",
+        "**/permissions*",
+        "**/login*"
+      ]
+    },
+    {
+      "id": "input",
+      "globs": [
+        "**/routes/**",
+        "**/route*",
+        "**/endpoint*",
+        "**/handlers/**",
+        "**/controllers/**"
+      ]
+    },
+    {
+      "id": "mcp",
+      "globs": ["**/mcp-server/**", "**/mcp/**"]
+    },
+    {
+      "id": "data-exposure",
+      "globs": ["**/dto*", "**/serializ*", "**/response*"],
+      "diff_keywords": [".select(", "res.json(", "res.send(", "toJSON"]
+    },
+    {
+      "id": "ssrf",
+      "globs": ["**/fetch*", "**/webhook*", "**/redirect*", "**/proxy*"],
+      "diff_keywords": [
+        "fetch(",
+        "axios.",
+        "got(",
+        "http.get(",
+        "http.request("
+      ]
+    },
+    {
+      "id": "db-core",
+      "globs": ["**/migrations/**", "**/db/**", "**/schema.sql", "**/*.sql"]
+    },
+    {
+      "id": "db-callsite",
+      "globs": [
+        "**/repositories/**",
+        "**/services/**",
+        "**/models/**",
+        "**/queries/**"
+      ],
+      "diff_keywords": [
+        ".select(",
+        ".insert(",
+        ".update(",
+        ".delete(",
+        ".findMany(",
+        ".findOne(",
+        ".create(",
+        ".remove(",
+        "projection:",
+        "orderBy:",
+        "where:",
+        ".where(",
+        "beginTransaction",
+        "db.selectFrom(",
+        "db.insertInto(",
+        "db.updateTable(",
+        "db.deleteFrom(",
+        "sql`"
+      ]
+    },
+    {
+      "id": "ui",
+      "globs": [
+        "**/*.tsx",
+        "**/*.jsx",
+        "**/components/**",
+        "**/*.css",
+        "**/*.scss"
+      ]
+    },
+    { "id": "deps", "globs": ["**/package.json"] },
+    { "id": "docs", "globs": ["docs/decisions/**", "docs/specs/**"] },
+    { "id": "api", "globs": ["**/api/**"] }
+  ],
+
+  "checks": [
+    {
+      "id": "SD-TRUST",
+      "phase": "P0",
+      "kind": "meta",
+      "rule": "Client field -> attacker sends arbitrary value -> worst case?"
+    },
+    {
+      "id": "SD-TRUST-AUTH",
+      "phase": "P0",
+      "parent": "SD-TRUST",
+      "rule": "Auth/session decisions (lifetime, privileges, roles)",
+      "severity_default": "S0",
+      "tags": ["auth"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "SD-TRUST-BIZ",
+      "phase": "P0",
+      "parent": "SD-TRUST",
+      "rule": "Business logic (prices, quantities, limits)",
+      "severity_default": "S0",
+      "tags": ["input"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "SD-TRUST-FETCH",
+      "phase": "P0",
+      "parent": "SD-TRUST",
+      "rule": "Server actions (URLs, paths, redirects)",
+      "severity_default": "S0",
+      "tags": ["ssrf"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "SD-TRUST-SHAPE",
+      "phase": "P0",
+      "parent": "SD-TRUST",
+      "rule": "Data shape (spread into DB, sort/filter params)",
+      "severity_default": "S0",
+      "tags": ["input", "db-core", "db-callsite"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "SD-OWASP",
+      "phase": "P0",
+      "kind": "meta",
+      "rule": "Which OWASP categories does this change touch?"
+    },
+    {
+      "id": "SD-OWASP-AUTHN",
+      "phase": "P0",
+      "parent": "SD-OWASP",
+      "rule": "Credential storage, brute-force protection, recovery, MFA",
+      "severity_default": "S0",
+      "tags": ["auth"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "SD-OWASP-SESS",
+      "phase": "P0",
+      "parent": "SD-OWASP",
+      "rule": "Server-controlled lifetime, cookie flags, idle vs absolute timeout, rotation on privilege change",
+      "severity_default": "S0",
+      "tags": ["auth"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "SD-OWASP-AUTHZ",
+      "phase": "P0",
+      "parent": "SD-OWASP",
+      "rule": "Deny-by-default, server-side enforcement, no IDOR by design",
+      "severity_default": "S0",
+      "tags": ["auth"]
+    },
+    {
+      "id": "SD-OWASP-DATA",
+      "phase": "P0",
+      "parent": "SD-OWASP",
+      "rule": "Return only needed fields, tenant/ownership filters on bulk",
+      "severity_default": "S0",
+      "tags": ["data-exposure", "db-callsite"]
+    },
+    {
+      "id": "SD-OWASP-SSRF",
+      "phase": "P0",
+      "parent": "SD-OWASP",
+      "rule": "Allowlist URLs, reject private IPs/non-HTTPS/unexpected ports",
+      "severity_default": "S0",
+      "tags": ["ssrf"]
+    },
+    {
+      "id": "SD-OWASP-MASS",
+      "phase": "P0",
+      "parent": "SD-OWASP",
+      "rule": "Flag if request body reaches DB/constructor without explicit field allowlist",
+      "severity_default": "S0",
+      "tags": ["input"]
+    },
+    {
+      "id": "SD-OWASP-CRYPTO",
+      "phase": "P0",
+      "parent": "SD-OWASP",
+      "rule": "128+ bit tokens, bcrypt/scrypt/argon2, no Math.random() for security",
+      "severity_default": "S0",
+      "tags": ["auth"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "SD-OWASP-RATE",
+      "phase": "P0",
+      "parent": "SD-OWASP",
+      "rule": "Rate limits on unauthed resource creation, concurrency on expensive ops",
+      "severity_default": "S1",
+      "tags": ["input"]
+    },
+    {
+      "id": "SD-THREAT",
+      "phase": "P0",
+      "rule": "Flag if change widens attack surface with no documented mitigation",
+      "severity_default": "S0",
+      "tags": [],
+      "tier": "reasoning"
+    },
+    {
+      "id": "SD-DEPTH",
+      "phase": "P0",
+      "rule": "Flag if single control failure has unbounded impact",
+      "severity_default": "S0",
+      "tags": [],
+      "tier": "reasoning"
+    },
+
+    {
+      "id": "SI-SECRET",
+      "phase": "P1",
+      "rule": "No hardcoded secrets/keys/tokens/credentials",
+      "severity_default": "S0",
+      "tags": []
+    },
+    {
+      "id": "SI-LOG",
+      "phase": "P1",
+      "rule": "No logging sensitive headers, tokens, PII",
+      "severity_default": "S0",
+      "tags": []
+    },
+    {
+      "id": "SI-AUTHZ",
+      "phase": "P1",
+      "rule": "Auth middleware applied; endpoint checks authorization. MCP tools: declare permissions[] enforced via shared hasPermission; auth-required by default.",
+      "severity_default": "S0",
+      "tags": ["auth", "api", "mcp"]
+    },
+    {
+      "id": "SI-VALID",
+      "phase": "P1",
+      "rule": "Validation schema applied before handler (e.g. Zod). MCP tools: inputSchema constrains every accepted arg -- no permissive bare object schema on tools that take args.",
+      "severity_default": "S1",
+      "tags": ["input", "api", "mcp"]
+    },
+    {
+      "id": "SI-SQL",
+      "phase": "P1",
+      "rule": "No user string interpolation. sql.val() for values, sql.ref() trusted static only, allowlist for dynamic identifiers.",
+      "severity_default": "S0",
+      "tags": ["db-core", "db-callsite"]
+    },
+    {
+      "id": "SI-XSS",
+      "phase": "P1",
+      "rule": "No dangerouslySetInnerHTML without DOMPurify, no eval(), no javascript: hrefs",
+      "severity_default": "S0",
+      "tags": ["ui"]
+    },
+    {
+      "id": "SI-ZOD",
+      "phase": "P1",
+      "rule": "No z.any()/z.unknown() without downstream narrowing",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "SI-ERR",
+      "phase": "P1",
+      "rule": "Errors don't leak stack traces, paths, internal schema. MCP: auth-time error codes are operator-only (stderr), never delivered over the protocol; per-call errors use the structured McpToolError payload with generic messages (DB errors -> DB_ERROR).",
+      "severity_default": "S1",
+      "tags": ["api", "mcp"]
+    },
+    {
+      "id": "MCP-ORG-SCOPE",
+      "phase": "P1",
+      "rule": "Every MCP tool handler touching org-scoped data must scope queries by context.organizationId (bound key) or a validated org argument. Tools accepting organizationId must declare requiresOrgMatch (dispatcher rejects mismatches for non-global-admins). Handlers without requiresOrgMatch must not accept org args and must explicitly handle a null bound org (global-admin cross-org keys) -- never default to unscoped queries.",
+      "severity_default": "S0",
+      "tags": ["mcp"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "MCP-READONLY",
+      "phase": "P1",
+      "rule": "MCP tools with write effects must declare access: 'write' so the dispatcher's read-only gate blocks read-only keys. No DB writes or side effects inside access: 'read' handlers.",
+      "severity_default": "S0",
+      "tags": ["mcp"],
+      "tier": "reasoning"
+    },
+
+    {
+      "id": "COR-LOGIC",
+      "phase": "P2",
+      "rule": "Trace branches. Wrong operators, inverted conditions, off-by-one, unreachable code.",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "COR-EDGE",
+      "phase": "P2",
+      "rule": "Unhandled null/undefined, empty array/string, boundary values, concurrent access.",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "COR-ASYNC",
+      "phase": "P2",
+      "rule": "Race conditions, unhandled rejections, broken async error propagation, missing await.",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "COR-DATA",
+      "phase": "P2",
+      "rule": "Type mismatches across boundaries, lossy conversions, timezone errors.",
+      "severity_default": "S1",
+      "tags": []
+    },
+
+    {
+      "id": "TS-ANY",
+      "phase": "P3",
+      "rule": "No `any`. Use explicit types/generics/z.infer<>. Comment if unavoidable, narrow immediately.",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "TS-ASSERT",
+      "phase": "P3",
+      "rule": "No `as Foo` without type guard",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "TS-IGNORE",
+      "phase": "P3",
+      "rule": "No @ts-ignore/@ts-expect-error without comment",
+      "severity_default": "S2",
+      "tags": []
+    },
+    {
+      "id": "TS-BRAND",
+      "phase": "P3",
+      "rule": "Branded IDs (ProjectId, UserId) not raw string/number",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "TS-INFER",
+      "phase": "P3",
+      "rule": "z.infer<typeof schema> not parallel interfaces",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "TS-IMPORT",
+      "phase": "P3",
+      "rule": "`import type` for type-only",
+      "severity_default": "S2",
+      "tags": []
+    },
+    {
+      "id": "TS-PROMISE",
+      "phase": "P3",
+      "rule": "No floating promises. void for fire-and-forget. Promise.all for independent ops.",
+      "severity_default": "S1",
+      "tags": [],
+      "dedup_with": "COR-ASYNC"
+    },
+    {
+      "id": "TS-CATCH",
+      "phase": "P3",
+      "rule": "catch error typed unknown, narrowed before access",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "TS-REACT",
+      "phase": "P3",
+      "rule": "children: ReactNode, refs: explicit generic, context: explicit type",
+      "severity_default": "S2",
+      "tags": ["ui"]
+    },
+
+    {
+      "id": "ARCH-LAYER",
+      "phase": "P4",
+      "rule": "Logic in api-lib not handlers. Handlers: parse -> api-lib -> respond.",
+      "severity_default": "S1",
+      "tags": ["api"]
+    },
+    {
+      "id": "ARCH-DB",
+      "phase": "P4",
+      "rule": "No Kysely/direct DB imports outside db package",
+      "severity_default": "S1",
+      "tags": ["db-core", "db-callsite"]
+    },
+    {
+      "id": "ARCH-CRUD",
+      "phase": "P4",
+      "rule": "Named-object pattern, CRUD grouped by related tables",
+      "severity_default": "S1",
+      "tags": ["db-core"],
+      "tier": "repo"
+    },
+    {
+      "id": "ARCH-QKEY",
+      "phase": "P4",
+      "rule": "Query keys from lib/queryKeys.ts factory, not hardcoded",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "repo"
+    },
+    {
+      "id": "ARCH-QOPT",
+      "phase": "P4",
+      "rule": "queryOptions() factory, not inline queryKey/queryFn",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "repo"
+    },
+    {
+      "id": "ARCH-HOOK",
+      "phase": "P4",
+      "rule": "No useEffect+useState for async. Use useQuery/useMutation.",
+      "severity_default": "S1",
+      "tags": ["ui"]
+    },
+    {
+      "id": "ARCH-CACHE",
+      "phase": "P4",
+      "rule": "Invalidation explicit+scoped, not blanket invalidateQueries",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "repo"
+    },
+    {
+      "id": "ARCH-ROUTE",
+      "phase": "P4",
+      "rule": "express-zod-api (apps/api/src/ez/endpoints/)",
+      "severity_default": "S1",
+      "tags": ["api"]
+    },
+    {
+      "id": "ARCH-CSV",
+      "phase": "P4",
+      "rule": "CSV endpoints server-side only",
+      "severity_default": "S1",
+      "tags": ["api"]
+    },
+    {
+      "id": "ARCH-IMPORT",
+      "phase": "P4",
+      "rule": "apps/* -> packages/* only, never reverse",
+      "severity_default": "S1",
+      "tags": []
+    },
+    {
+      "id": "ARCH-DELETE",
+      "phase": "P4",
+      "rule": "mutationKey: ['delete', resourceType, id]",
+      "severity_default": "S2",
+      "tags": ["ui"],
+      "tier": "repo"
+    },
+
+    {
+      "id": "SCH-EQUIV",
+      "phase": "P5",
+      "rule": "Migrations in order on empty DB = schema.sql state",
+      "severity_default": "S0",
+      "tags": ["db-core"]
+    },
+    {
+      "id": "SCH-DROP",
+      "phase": "P5",
+      "rule": "Removed from schema.sql? Migration must drop it.",
+      "severity_default": "S0",
+      "tags": ["db-core"]
+    },
+    {
+      "id": "SCH-RENAME-TBL",
+      "phase": "P5",
+      "rule": "Renamed table? Also rename _pkey + FK constraints. Postgres won't.",
+      "severity_default": "S0",
+      "tags": ["db-core"]
+    },
+    {
+      "id": "SCH-RENAME-COL",
+      "phase": "P5",
+      "rule": "Renamed column in view? Drop/recreate views.",
+      "severity_default": "S0",
+      "tags": ["db-core"]
+    },
+    {
+      "id": "SCH-ADD-COL",
+      "phase": "P5",
+      "rule": "Added column, table has views? Drop/recreate.",
+      "severity_default": "S0",
+      "tags": ["db-core"]
+    },
+    {
+      "id": "SCH-ENUM",
+      "phase": "P5",
+      "rule": "ALTER TYPE ADD VALUE IF NOT EXISTS. No CREATE TYPE rebuild.",
+      "severity_default": "S0",
+      "tags": ["db-core"]
+    },
+    {
+      "id": "SCH-VIEW-SYNC",
+      "phase": "P5",
+      "rule": "Migration rebuilds view? tests/postgres/views/*.sql must match.",
+      "severity_default": "S0",
+      "tags": ["db-core"],
+      "tier": "repo"
+    },
+    {
+      "id": "SCH-THREE-FILE",
+      "phase": "P5",
+      "rule": "Migration file present? schema.sql + view files must also be changed.",
+      "severity_default": "S0",
+      "tags": ["db-core"],
+      "tier": "repo"
+    },
+    {
+      "id": "SCH-IDX-FK",
+      "phase": "P5",
+      "rule": "FK columns must have indexes. Postgres does NOT auto-create them. Flag any FK constraint or column used as a join predicate without a corresponding CREATE INDEX in schema.sql.",
+      "severity_default": "S1",
+      "tags": ["db-core"],
+      "tier": "repo"
+    },
+    {
+      "id": "SCH-VIEW-JOIN",
+      "phase": "P5",
+      "rule": "View JOIN predicate columns must have index coverage. Cross-reference ON/USING columns in view definitions against CREATE INDEX statements in schema.sql. Missing index on a join column = seq scan under load.",
+      "severity_default": "S1",
+      "tags": ["db-core"],
+      "tier": "repo"
+    },
+    {
+      "id": "SCH-VIEW-LATERAL",
+      "phase": "P5",
+      "rule": "LATERAL subqueries must drive from the most selective (filtered/indexed) table outward. Flag if the outer/driving table in a LATERAL is high-cardinality with no restrictive WHERE filter. Reversed join order causes N-per-row subquery execution; look for Nested Loop with N loops on a large outer relation in EXPLAIN output.",
+      "severity_default": "S0",
+      "tags": ["db-core"],
+      "tier": "repo"
+    },
+    {
+      "id": "SCH-NAMING",
+      "phase": "P5",
+      "rule": "YYYY/YYYY_MM_DD_description.sql",
+      "severity_default": "S1",
+      "tags": ["db-core"]
+    },
+    {
+      "id": "SCH-CONSOLIDATE",
+      "phase": "P5",
+      "rule": "Minimize migration file count. A PR should add as few migration files as possible -- consolidate related DDL into a single file. Splitting is only justified when a transactional constraint forces it (e.g. ALTER TYPE ADD VALUE must commit before the value is referenced; CREATE INDEX CONCURRENTLY cannot run inside a tx). Flag any PR adding 2+ migration files and require explicit justification per extra file. WHEN A SPLIT IS JUSTIFIED: the filename's alphabetical order must match the dependency order, because the runner applies files lexicographically. Same-date files sort by the description suffix -- e.g. `2026_05_26_mcp_required_columns_check.sql` sorts BEFORE `2026_05_26_mcp_user_api_key.sql`, so a CHECK in the first that references a column added by the second will fail on a fresh DB. Either consolidate, rename to fix ordering, or bump the date on the dependent file.",
+      "severity_default": "S0",
+      "tags": ["db-core"]
+    },
+    {
+      "id": "SCH-PR",
+      "phase": "P5",
+      "kind": "orch",
+      "rule": "PR description includes destructive SQL + INSERT INTO _schema_migrations per file",
+      "severity_default": "S1"
+    },
+
+    {
+      "id": "A11Y-NAME",
+      "phase": "P6",
+      "rule": "Interactive elements: discoverable name. IconButton->aria-label. Input->label.",
+      "severity_default": "S1",
+      "tags": ["ui"]
+    },
+    {
+      "id": "A11Y-DECO",
+      "phase": "P6",
+      "rule": "Meaningful img: alt. Decorative: aria-hidden. Standalone SVG: role=\"img\"+aria-label.",
+      "severity_default": "S1",
+      "tags": ["ui"]
+    },
+    {
+      "id": "A11Y-KB",
+      "phase": "P6",
+      "rule": "Mouse handlers -> focus equivalents. Non-button click -> role+tabIndex+onKeyDown.",
+      "severity_default": "S1",
+      "tags": ["ui"]
+    },
+    {
+      "id": "A11Y-LIVE",
+      "phase": "P6",
+      "rule": "Dynamic regions: aria-live=\"polite\". Loading: Spinner or visually-hidden text.",
+      "severity_default": "S2",
+      "tags": ["ui"]
+    },
+    {
+      "id": "A11Y-GROUP",
+      "phase": "P6",
+      "rule": "Icon+text: group or mark icon aria-hidden.",
+      "severity_default": "S2",
+      "tags": ["ui"]
+    },
+    {
+      "id": "A11Y-COLOR",
+      "phase": "P6",
+      "rule": "No color-only differentiation. Secondary cue required.",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "A11Y-CONTRAST",
+      "phase": "P6",
+      "rule": "Text 4.5:1 / 3:1 large. Check hardcoded colors.",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "A11Y-NONTEXT",
+      "phase": "P6",
+      "rule": "Controls/graphics 3:1.",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "A11Y-TRAP",
+      "phase": "P6",
+      "rule": "Modal focus trap+return. Escape dismisses popover/tooltip.",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "A11Y-FOCUS",
+      "phase": "P6",
+      "rule": "No suppressed outline. Custom focus 3:1.",
+      "severity_default": "S2",
+      "tags": ["ui"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "A11Y-TIMING",
+      "phase": "P6",
+      "rule": "Auto-dismiss >=5s or user-controllable.",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "A11Y-3P-CSS",
+      "phase": "P6",
+      "rule": "Third-party containers: hardcode color tokens.",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "reasoning"
+    },
+    {
+      "id": "A11Y-3P-KB",
+      "phase": "P6",
+      "rule": "Disabled native KB shortcuts? Alt path required.",
+      "severity_default": "S1",
+      "tags": ["ui"],
+      "tier": "reasoning"
+    },
+
+    {
+      "id": "DEP-LIST",
+      "phase": "P7",
+      "kind": "orch",
+      "rule": "List each new dependency + declared version for human review"
+    },
+    {
+      "id": "DEP-AGE",
+      "phase": "P7",
+      "kind": "orch",
+      "rule": "npm info -- flag versions <1 month old as supply chain risk",
+      "severity_default": "S1"
+    },
+    {
+      "id": "DEP-LATEST",
+      "phase": "P7",
+      "kind": "orch",
+      "rule": "Note latest version alongside added version"
+    },
+
+    {
+      "id": "PROC-ADR",
+      "phase": "PROC",
+      "rule": "ADR approval is a PR-level property, not a document property: a non-author's approval of the PR that carries the ADR into the repo's default branch is the approval, covering the ADR and its companion spec together. That approval is enforced by the repo's merge gate (branch protection / merge queue), NOT by this review -- never flag a PR for not-yet-approved status, and never require any approval record inside the ADR document (there is no Consensus section). What this check enforces from the diff: (1) a NEWLY ADDED ADR must not contain a Consensus or sign-off section -- that means it was written from an outdated template (pre-existing ADRs are historical records; do not flag them); (2) decisions involving significant pricing changes or adjustments to customer obligations must be flagged as a business-impacting decision requiring sign-off before implementation (customer-visible or expensive-to-reverse alone does not trigger this).",
+      "severity_default": "S1",
+      "tags": ["docs"]
+    },
+    {
+      "id": "PROC-DEFER",
+      "phase": "PROC",
+      "kind": "orch",
+      "rule": "Every explicitly deferred item in a spec, ADR, or PR description must have a linked tracking issue. Scan spec/ADR prose and the PR description for language that punts work to later -- 'deferred', 'out of scope (for now)', 'follow-up', 'later', 'future work', 'not in this PR', 'do this later', 'revisit', 'TBD'. For each such item, require an inline GitHub issue link (#NNN or full URL). Flag any deferred item with no linked issue. If a link is present, verify the issue exists and is open via `gh issue view <n>`; flag dangling or closed links. Scope: explicit prose deferrals only. Do NOT flag inline code comments such as `// TODO` / `// FIXME` -- those are intentionally out of scope. Runs on EVERY review regardless of active phase/tags.",
+      "severity_default": "S1"
+    }
+  ],
+
+  "output": {
+    "minimal": {
+      "required": ["check_id", "severity", "title", "target"]
+    },
+    "full": {
+      "required": ["check_id", "severity", "title", "target"],
+      "required_s0_s1": ["evidence", "suggested_fix"],
+      "optional": [
+        "attack_scenario",
+        "owasp_ref",
+        "phase",
+        "confidence",
+        "related_checks"
+      ]
+    },
+    "consolidation": {
+      "dedup_key": ["check_id", "target"],
+      "severity_rule": "max_wins",
+      "s0_downgrade": false,
+      "drop_s2": {
+        "when": "single_reviewer",
+        "unless": "target_has_line_number"
+      },
+      "dedup_with_rule": "merge into declaring check, max severity, union evidence"
+    },
+    "severity_override": "severity_default is prompt guidance only. Reviewers set severity per finding. Consolidation uses the finding severity, never severity_default."
+  },
+
+  "routing": [
+    { "tag": "*", "phases": ["P1", "P2", "P3"], "emphasize": [] },
+    {
+      "tag": "auth",
+      "phases": ["P0", "P1", "P2", "P3"],
+      "emphasize": [
+        "SD-TRUST-AUTH",
+        "SD-OWASP-AUTHN",
+        "SD-OWASP-SESS",
+        "SD-OWASP-AUTHZ",
+        "SD-OWASP-CRYPTO",
+        "SI-AUTHZ"
+      ]
+    },
+    {
+      "tag": "input",
+      "phases": ["P0", "P1", "P2", "P3", "P4"],
+      "emphasize": [
+        "SI-VALID",
+        "SI-SQL",
+        "SD-OWASP-MASS",
+        "ARCH-LAYER",
+        "ARCH-ROUTE"
+      ]
+    },
+    {
+      "tag": "data-exposure",
+      "phases": ["P0", "P1", "P2", "P3"],
+      "emphasize": ["SD-OWASP-DATA", "SI-ERR"]
+    },
+    {
+      "tag": "db-core",
+      "phases": ["P0", "P1", "P2", "P3", "P4", "P5"],
+      "emphasize": [
+        "SCH-EQUIV",
+        "SCH-DROP",
+        "SI-SQL",
+        "ARCH-DB",
+        "ARCH-CRUD",
+        "SCH-IDX-FK",
+        "SCH-VIEW-JOIN",
+        "SCH-VIEW-LATERAL"
+      ]
+    },
+    {
+      "tag": "db-callsite",
+      "phases": ["P0", "P1", "P2", "P3", "P4"],
+      "emphasize": ["SD-OWASP-DATA", "SD-TRUST-SHAPE", "SI-SQL", "ARCH-DB"]
+    },
+    {
+      "tag": "ui",
+      "phases": ["P1", "P2", "P3", "P4", "P6"],
+      "emphasize": ["A11Y-KB", "A11Y-NAME", "SI-XSS"]
+    },
+    {
+      "tag": "api",
+      "phases": ["P0", "P1", "P2", "P3", "P4"],
+      "emphasize": ["SD-OWASP-DATA", "SI-ERR", "ARCH-LAYER"]
+    },
+    {
+      "tag": "ssrf",
+      "phases": ["P0", "P1", "P2"],
+      "emphasize": ["SD-OWASP-SSRF", "SD-TRUST-FETCH"]
+    },
+    {
+      "tag": "mcp",
+      "phases": ["P0", "P1", "P2", "P3", "P4"],
+      "emphasize": [
+        "MCP-ORG-SCOPE",
+        "MCP-READONLY",
+        "SD-OWASP-DATA",
+        "SD-TRUST-SHAPE",
+        "SI-AUTHZ",
+        "SI-VALID",
+        "SD-OWASP-RATE"
+      ]
+    },
+    { "tag": "deps", "phases": ["P7"], "emphasize": ["DEP-AGE"] },
+    { "tag": "docs", "phases": ["PROC"], "emphasize": ["PROC-ADR"] }
+  ],
+
+  "runner_hints": {
+    "high_risk_combos": [
+      {
+        "tags": ["db-core", "db-callsite"],
+        "note": "Both DB implementation and callsite code changed. Increased risk of data exposure, trust boundary violations, and SQL injection. Scrutinize projection/filter changes against schema changes.",
+        "emphasize": [
+          "SI-SQL",
+          "SD-TRUST-SHAPE",
+          "SD-OWASP-DATA",
+          "ARCH-DB",
+          "SCH-IDX-FK",
+          "SCH-VIEW-JOIN",
+          "SCH-VIEW-LATERAL"
+        ]
+      },
+      {
+        "tags": ["mcp", "db-core"],
+        "note": "MCP tool surface and DB schema changed together. Verify org-scoping of any new columns/views exposed through tools, and that tool queries respect the resource-limited MCP DB role assumptions (statement timeouts, row caps).",
+        "emphasize": ["MCP-ORG-SCOPE", "SD-OWASP-DATA", "SI-SQL"]
+      }
+    ]
+  }
+}

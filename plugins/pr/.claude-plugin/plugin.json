@@ -1,0 +1,9 @@
+{
+  "name": "pr",
+  "version": "1.0.0",
+  "description": "Keep a PR healthy: sync its branch with the base branch (merge, conflicts, release-impact analysis), then address review comments and failing checks.",
+  "author": {
+    "name": "Jason Warta"
+  },
+  "keywords": ["pull-request", "review-comments", "merge", "catch-up", "ci"]
+}

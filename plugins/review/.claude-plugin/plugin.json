@@ -1,0 +1,9 @@
+{
+  "name": "review",
+  "version": "1.4.0",
+  "description": "Adversarial multi-model code/spec review, backed by the machine-optimized code-review-checklist engine.",
+  "author": {
+    "name": "Jason Warta"
+  },
+  "keywords": ["review", "adversarial", "code-review", "checklist"]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "hours-tracker",
+  "version": "1.0.0",
+  "description": "Generate monthly billing from git history: a daily hours breakdown with per-day charge rates by work category.",
+  "author": {
+    "name": "Jason Warta"
+  },
+  "keywords": ["billing", "hours", "git", "reporting", "invoicing"]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "spec",
+  "version": "1.5.0",
+  "description": "Phased feature-design workflow: Discovery -> optional ADR -> Specification, with a real decision gate.",
+  "author": {
+    "name": "Jason Warta"
+  },
+  "keywords": ["spec", "adr", "discovery", "workflow", "planning"]
+}

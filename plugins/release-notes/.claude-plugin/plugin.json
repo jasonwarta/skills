@@ -1,0 +1,9 @@
+{
+  "name": "release-notes",
+  "version": "1.0.0",
+  "description": "Generate and consolidate GitHub release notes from commits and draft releases.",
+  "author": {
+    "name": "Jason Warta"
+  },
+  "keywords": ["release-notes", "changelog", "github", "releases"]
+}

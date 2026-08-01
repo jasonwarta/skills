@@ -1,0 +1,9 @@
+{
+  "name": "orchestrator",
+  "version": "0.1.0",
+  "description": "The Principal-Engineer 'orchestrate' skill for dispatching disciplined execution across interchangeable AI workers (the Loom orchestration platform).",
+  "author": {
+    "name": "Jason Warta"
+  },
+  "keywords": ["orchestration", "multi-agent", "codex", "subagents", "principal-engineer", "backend-independent"]
+}

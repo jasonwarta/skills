@@ -1,0 +1,44 @@
+{
+  "name": "jasonwarta",
+  "owner": {
+    "name": "Jason Warta"
+  },
+  "plugins": [
+    {
+      "name": "spec",
+      "source": "./plugins/spec",
+      "description": "Phased feature-design workflow: Discovery -> optional ADR -> Specification, with a real decision gate.",
+      "version": "1.5.0"
+    },
+    {
+      "name": "review",
+      "source": "./plugins/review",
+      "description": "Adversarial multi-model code/spec review, backed by the machine-optimized code-review-checklist engine.",
+      "version": "1.4.0"
+    },
+    {
+      "name": "pr",
+      "source": "./plugins/pr",
+      "description": "Keep a PR healthy: sync its branch with the base, then address review comments and failing checks.",
+      "version": "1.0.0"
+    },
+    {
+      "name": "orchestrator",
+      "source": "./plugins/orchestrator",
+      "description": "The Principal-Engineer 'orchestrate' skill for dispatching disciplined execution across interchangeable AI workers.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "hours-tracker",
+      "source": "./plugins/hours-tracker",
+      "description": "Generate monthly billing from git history: a daily hours breakdown with per-day charge rates by work category.",
+      "version": "1.0.0"
+    },
+    {
+      "name": "release-notes",
+      "source": "./plugins/release-notes",
+      "description": "Generate and consolidate GitHub release notes from commits and draft releases.",
+      "version": "1.0.0"
+    }
+  ]
+}
